@@ -30,6 +30,19 @@ let currentPage = 1;
 let itemsPerPage = 5;
 let lastFoundKey = '';
 let lastFoundFile = '';
+let selectedFile = 'all';
+let showMissingOnly = false;
+
+function getFilteredResults() {
+  let results = currentResults;
+  if (selectedFile !== 'all') {
+    results = results.filter(r => r.file === selectedFile);
+  }
+  if (showMissingOnly) {
+    results = results.filter(r => r.value === 'Missing ❌');
+  }
+  return results;
+}
 
 function getLanguageFromFilename(filename) {
   const match = filename.match(/([a-z]{2}(-[A-Z]{2})?)\.json$/i);
@@ -216,7 +229,9 @@ function showResults(foundKey, searchValue, foundFile, allFiles) {
 
   
   const select = document.getElementById("itemsPerPageSelect");
-  itemsPerPage = parseInt(select.value) || 5; 
+  const fileSelect = document.getElementById("fileFilterSelect");
+  const missingButton = document.getElementById("missingButton");
+  itemsPerPage = parseInt(select.value) || 5;
   
   // Build the results data
   currentResults = [];
@@ -249,12 +264,23 @@ function showResults(foundKey, searchValue, foundFile, allFiles) {
       });
     }
   }
-  
+
+  fileSelect.innerHTML = '<option value="all">All Files</option>';
+  for (const fileData of allFiles) {
+    const option = document.createElement('option');
+    option.value = fileData.name;
+    option.textContent = fileData.name;
+    fileSelect.appendChild(option);
+  }
+  selectedFile = 'all';
+  showMissingOnly = false;
+  missingButton.textContent = 'Show Missing Files';
+
   // Reset to first page
   currentPage = 1;
-  
+
   // Show results with pagination
-  displayResultsPage(foundKey, foundFile);
+  displayResultsPage();
 }
 
 function displayResultsPage() {
@@ -262,11 +288,13 @@ function displayResultsPage() {
   const foundFile = lastFoundFile;
   const resultsContainer = document.getElementById("results-container");
   
+  const filteredResults = getFilteredResults();
+
   // Calculate pagination
-  const totalPages = Math.ceil(currentResults.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredResults.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const pageResults = currentResults.slice(startIndex, endIndex);
+  const pageResults = filteredResults.slice(startIndex, endIndex);
   
   // Build table rows for current page
   let tableRows = "";
@@ -303,7 +331,7 @@ function displayResultsPage() {
     paginationControls = `
       <div class="pagination-container">
         <div class="pagination-info">
-          Showing ${startIndex + 1}-${Math.min(endIndex, currentResults.length)} of ${currentResults.length} results
+          Showing ${startIndex + 1}-${Math.min(endIndex, filteredResults.length)} of ${filteredResults.length} results
         </div>
         <div class="pagination-controls">
           <button class="pagination-btn" onclick="previousPage()" ${currentPage === 1 ? 'disabled' : ''}>
@@ -351,7 +379,7 @@ function goToPage(page) {
 }
 
 function nextPage() {
-  const totalPages = Math.ceil(currentResults.length / itemsPerPage);
+  const totalPages = Math.ceil(getFilteredResults().length / itemsPerPage);
   if (currentPage < totalPages) {
     currentPage++;
     displayResultsPage(); // We need to store these values
@@ -377,13 +405,32 @@ function readFile(file) {
 
 document.addEventListener("DOMContentLoaded", () => {
   const select = document.getElementById("itemsPerPageSelect");
+  const fileSelect = document.getElementById("fileFilterSelect");
+  const missingButton = document.getElementById("missingButton");
 
   select.addEventListener("change", () => {
     itemsPerPage = parseInt(select.value) || 5;
 
     if (currentResults.length > 0) {
       currentPage = 1;
-      displayResultsPage(lastFoundKey, lastFoundFile);
+      displayResultsPage();
+    }
+  });
+
+  fileSelect.addEventListener("change", () => {
+    selectedFile = fileSelect.value;
+    if (currentResults.length > 0) {
+      currentPage = 1;
+      displayResultsPage();
+    }
+  });
+
+  missingButton.addEventListener("click", () => {
+    showMissingOnly = !showMissingOnly;
+    missingButton.textContent = showMissingOnly ? "Show All Files" : "Show Missing Files";
+    if (currentResults.length > 0) {
+      currentPage = 1;
+      displayResultsPage();
     }
   });
 });
