@@ -26,6 +26,9 @@ const languageMap = {
 // Global variables
 let loadedFiles = [];
 let currentResults = [];
+let allResults = [];
+let selectedFile = "all";
+let showOnlyMissing = false;
 let currentPage = 1;
 let itemsPerPage = 5;
 let lastFoundKey = '';
@@ -210,6 +213,9 @@ async function findKey() {
 
 function showResults(foundKey, searchValue, foundFile, allFiles) {
   const resultsContainer = document.getElementById("results-container");
+  const fileSelect = document.getElementById("fileFilterSelect");
+  const filterControls = document.getElementById("filter-controls");
+  const missingBtn = document.getElementById("missingFilterButton");
 
   lastFoundKey = foundKey;
   lastFoundFile = foundFile;
@@ -219,22 +225,22 @@ function showResults(foundKey, searchValue, foundFile, allFiles) {
   itemsPerPage = parseInt(select.value) || 5; 
   
   // Build the results data
-  currentResults = [];
-  
+  allResults = [];
+
   for (const fileData of allFiles) {
     try {
       if (foundKey in fileData.content) {
         const language = getLanguageFromFilename(fileData.name);
         const value = fileData.content[foundKey];
         
-        currentResults.push({
+        allResults.push({
           file: fileData.name,
           value: value,
           language: language
         });
       }else{
           const language = getLanguageFromFilename(fileData.name);
-          currentResults.push({
+          allResults.push({
           file: fileData.name,
           value: "Missing ❌",
           language: language,
@@ -242,17 +248,37 @@ function showResults(foundKey, searchValue, foundFile, allFiles) {
       }
     } catch (err) {
       console.error(`Error processing ${fileData.name}:`, err);
-      currentResults.push({
+      allResults.push({
         file: fileData.name,
         value: "Missing ❌ error",
         language: "Missing ❌ error",
       });
     }
   }
-  
+
   // Reset to first page
   currentPage = 1;
-  
+
+  // Populate file dropdown options
+  if (fileSelect) {
+    fileSelect.innerHTML = '<option value="all">All Files</option>' +
+      allResults.map(r => r.file)
+               .filter((v, i, a) => a.indexOf(v) === i)
+               .map(f => `<option value="${f}">${f}</option>`)
+               .join('');
+    fileSelect.value = 'all';
+  }
+  if (filterControls) filterControls.style.display = 'block';
+  if (missingBtn) {
+    missingBtn.disabled = false;
+    missingBtn.textContent = 'Show Missing Files';
+  }
+
+  // Reset filters
+  selectedFile = 'all';
+  showOnlyMissing = false;
+  currentResults = allResults.slice();
+
   // Show results with pagination
   displayResultsPage(foundKey, foundFile);
 }
@@ -350,6 +376,31 @@ function goToPage(page) {
   displayResultsPage(); // We need to store these values
 }
 
+function applyFilters() {
+  let filtered = allResults.slice();
+
+  if (selectedFile !== 'all') {
+    filtered = filtered.filter(item => item.file === selectedFile);
+  }
+
+  if (showOnlyMissing) {
+    filtered = filtered.filter(item => item.value === 'Missing ❌');
+  }
+
+  currentResults = filtered;
+  currentPage = 1;
+  displayResultsPage();
+}
+
+function toggleMissingFilter() {
+  showOnlyMissing = !showOnlyMissing;
+  const btn = document.getElementById('missingFilterButton');
+  if (btn) {
+    btn.textContent = showOnlyMissing ? 'Show All' : 'Show Missing Files';
+  }
+  applyFilters();
+}
+
 function nextPage() {
   const totalPages = Math.ceil(currentResults.length / itemsPerPage);
   if (currentPage < totalPages) {
@@ -377,15 +428,28 @@ function readFile(file) {
 
 document.addEventListener("DOMContentLoaded", () => {
   const select = document.getElementById("itemsPerPageSelect");
+  const fileSelect = document.getElementById("fileFilterSelect");
+  const missingBtn = document.getElementById("missingFilterButton");
 
   select.addEventListener("change", () => {
     itemsPerPage = parseInt(select.value) || 5;
 
     if (currentResults.length > 0) {
       currentPage = 1;
-      displayResultsPage(lastFoundKey, lastFoundFile);
+      displayResultsPage();
     }
   });
+
+  if (fileSelect) {
+    fileSelect.addEventListener("change", () => {
+      selectedFile = fileSelect.value;
+      applyFilters();
+    });
+  }
+
+  if (missingBtn) {
+    missingBtn.addEventListener("click", toggleMissingFilter);
+  }
 });
 
 function toggleInstructions() {

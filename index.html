@@ -170,6 +170,19 @@ button {
   box-shadow: 0 4px 12px rgba(123, 123, 124, 0.3);
   background-color: #E5E7EB;
  }
+.filter-button {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: var(--border-radius-md);
+  margin-left: 0.5rem;
+  cursor: pointer;
+}
+.filter-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 
 .tool-header-row { 
   display: flex;
@@ -312,6 +325,15 @@ STYLES FOR DYNAMICALLY GENERATED RESULTS
           <option value="10">10</option>
           <option value="20">20</option>
         </select>
+      </div>
+      <div class="form-group" id="filter-controls" style="display:none;">
+        <label for="fileFilterSelect">Filter by file:</label>
+        <select id="fileFilterSelect">
+          <option value="all" selected>All Files</option>
+        </select>
+        <button class="filter-button" id="missingFilterButton" onclick="toggleMissingFilter()" disabled>
+          Show Missing Files
+        </button>
       </div>
 
       <div class="result-title">Result:</div>
