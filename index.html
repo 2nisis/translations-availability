@@ -314,6 +314,16 @@ STYLES FOR DYNAMICALLY GENERATED RESULTS
         </select>
       </div>
 
+      <div class="form-group">
+        <label for="fileFilterSelect">Filter by file:</label>
+        <select id="fileFilterSelect">
+          <option value="all" selected>All Files</option>
+        </select>
+        <button class="file-button" id="missingOnlyBtn" onclick="toggleMissingOnly()">
+          Show Missing Files
+        </button>
+      </div>
+
       <div class="result-title">Result:</div>
       <div class="result-box error" id="result">
         ❌ You must enter a value to search.
