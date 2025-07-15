@@ -30,6 +30,8 @@ let currentPage = 1;
 let itemsPerPage = 5;
 let lastFoundKey = '';
 let lastFoundFile = '';
+let selectedFile = 'all';
+let showMissingOnly = false;
 
 function getLanguageFromFilename(filename) {
   const match = filename.match(/([a-z]{2}(-[A-Z]{2})?)\.json$/i);
@@ -135,10 +137,12 @@ async function loadDirectory() {
     // Display file names
     const fileNames = loadedFiles.map(f => f.name).join(', ');
     fileListContent.textContent = `files: ${fileNames}`;
-    
+
     // Enable search
     searchButton.disabled = false;
-    
+
+    populateFileFilter();
+
     // Update result to show waiting for input
     resultBox.className = "result-box error";
     resultBox.innerHTML = "❌ You must provide a value for the search..";
@@ -214,6 +218,17 @@ function showResults(foundKey, searchValue, foundFile, allFiles) {
   lastFoundKey = foundKey;
   lastFoundFile = foundFile;
 
+  selectedFile = 'all';
+  showMissingOnly = false;
+  const missingBtn = document.getElementById("missingOnlyBtn");
+  if (missingBtn) {
+    missingBtn.textContent = "Show Missing Files";
+  }
+  const fileFilterSelect = document.getElementById("fileFilterSelect");
+  if (fileFilterSelect) {
+    fileFilterSelect.value = 'all';
+  }
+
   
   const select = document.getElementById("itemsPerPageSelect");
   itemsPerPage = parseInt(select.value) || 5; 
@@ -261,12 +276,21 @@ function displayResultsPage() {
   const foundKey = lastFoundKey;
   const foundFile = lastFoundFile;
   const resultsContainer = document.getElementById("results-container");
-  
+
+  let filteredResults = currentResults;
+  if (selectedFile !== 'all') {
+    filteredResults = filteredResults.filter(r => r.file === selectedFile);
+  }
+  if (showMissingOnly) {
+    filteredResults = filteredResults.filter(r => r.value === 'Missing ❌');
+  }
+
   // Calculate pagination
-  const totalPages = Math.ceil(currentResults.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredResults.length / itemsPerPage) || 1;
+  if (currentPage > totalPages) currentPage = totalPages;
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const pageResults = currentResults.slice(startIndex, endIndex);
+  const pageResults = filteredResults.slice(startIndex, endIndex);
   
   // Build table rows for current page
   let tableRows = "";
@@ -303,7 +327,7 @@ function displayResultsPage() {
     paginationControls = `
       <div class="pagination-container">
         <div class="pagination-info">
-          Showing ${startIndex + 1}-${Math.min(endIndex, currentResults.length)} of ${currentResults.length} results
+          Showing ${filteredResults.length === 0 ? 0 : startIndex + 1}-${Math.min(endIndex, filteredResults.length)} of ${filteredResults.length} results
         </div>
         <div class="pagination-controls">
           <button class="pagination-btn" onclick="previousPage()" ${currentPage === 1 ? 'disabled' : ''}>
@@ -346,12 +370,29 @@ function displayResultsPage() {
 }
 
 function goToPage(page) {
+  let filteredResults = currentResults;
+  if (selectedFile !== 'all') {
+    filteredResults = filteredResults.filter(r => r.file === selectedFile);
+  }
+  if (showMissingOnly) {
+    filteredResults = filteredResults.filter(r => r.value === 'Missing ❌');
+  }
+  const totalPages = Math.ceil(filteredResults.length / itemsPerPage) || 1;
+  if (page < 1) page = 1;
+  if (page > totalPages) page = totalPages;
   currentPage = page;
   displayResultsPage(); // We need to store these values
 }
 
 function nextPage() {
-  const totalPages = Math.ceil(currentResults.length / itemsPerPage);
+  let filteredResults = currentResults;
+  if (selectedFile !== 'all') {
+    filteredResults = filteredResults.filter(r => r.file === selectedFile);
+  }
+  if (showMissingOnly) {
+    filteredResults = filteredResults.filter(r => r.value === 'Missing ❌');
+  }
+  const totalPages = Math.ceil(filteredResults.length / itemsPerPage) || 1;
   if (currentPage < totalPages) {
     currentPage++;
     displayResultsPage(); // We need to store these values
@@ -363,6 +404,31 @@ function previousPage() {
     currentPage--;
     displayResultsPage(); // We need to store these values
   }
+}
+
+function toggleMissingOnly() {
+  showMissingOnly = !showMissingOnly;
+  const btn = document.getElementById("missingOnlyBtn");
+  if (btn) {
+    btn.textContent = showMissingOnly ? "Show All Files" : "Show Missing Files";
+  }
+  currentPage = 1;
+  if (currentResults.length > 0) {
+    displayResultsPage();
+  }
+}
+
+function populateFileFilter() {
+  const select = document.getElementById("fileFilterSelect");
+  if (!select) return;
+  select.innerHTML = '<option value="all">All Files</option>';
+  for (const file of loadedFiles) {
+    const option = document.createElement('option');
+    option.value = file.name;
+    option.textContent = file.name;
+    select.appendChild(option);
+  }
+  selectedFile = 'all';
 }
 
 
@@ -377,6 +443,26 @@ function readFile(file) {
 
 document.addEventListener("DOMContentLoaded", () => {
   const select = document.getElementById("itemsPerPageSelect");
+
+  const fileFilterSelect = document.getElementById("fileFilterSelect");
+  const missingBtn = document.getElementById("missingOnlyBtn");
+
+  if (fileFilterSelect) {
+    fileFilterSelect.addEventListener("change", () => {
+      selectedFile = fileFilterSelect.value;
+      currentPage = 1;
+      if (currentResults.length > 0) {
+        displayResultsPage(lastFoundKey, lastFoundFile);
+      }
+    });
+  }
+
+  if (missingBtn) {
+    missingBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      toggleMissingOnly();
+    });
+  }
 
   select.addEventListener("change", () => {
     itemsPerPage = parseInt(select.value) || 5;
