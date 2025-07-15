@@ -116,6 +116,16 @@ h2 {
 
 /* --- Form Elements --- */
 .form-group { margin-bottom: 1.5rem; }
+#filter-controls {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+#fileFilterSelect {
+  max-height: 10rem;
+  overflow-y: auto;
+  width: auto;
+}
 label { display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--text-color-secondary); }
 input[type="text"], select {
   width: 100%;
@@ -312,6 +322,11 @@ STYLES FOR DYNAMICALLY GENERATED RESULTS
           <option value="10">10</option>
           <option value="20">20</option>
         </select>
+      </div>
+      <div class="form-group" id="filter-controls" style="display:none;">
+        <label for="fileFilterSelect">Filter by file:</label>
+        <select id="fileFilterSelect" size="5"></select>
+        <button type="button" class="file-button" id="showMissingButton">Show Missing Files</button>
       </div>
 
       <div class="result-title">Result:</div>
